@@ -9,7 +9,6 @@
 [![Language](https://img.shields.io/badge/language-Python-blue.svg)](https://github.com/enty8080/cwww-shell)
 [![Forks](https://img.shields.io/github/forks/enty8080/cwww-shell?style=flat&color=green)](https://github.com/enty8080/cwww-shell/forks)
 [![Stars](https://img.shields.io/github/stars/enty8080/cwww-shell?style=flat&color=yellow)](https://github.com/enty8080/cwww-shell/stargazers)
-[![CodeFactor](https://www.codefactor.io/repository/github/enty8080/cwww-shell/badge)](https://www.codefactor.io/repository/github/enty8080/cwww-shell)
 
 A proof-of-concept of placing backdoors behind firewalls using HTTP communication with command & control server. This tool uses HTTP requests to fetch commands and return 
 output to a control server.
