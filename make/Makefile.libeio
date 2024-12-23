@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2024 Ivan Nikolskiy
+# Copyright (c) 2020-2024 EntySec
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,30 +22,27 @@
 # SOFTWARE.
 #
 
-include make/Makefile.common
+LIBEIO_VERSION = 1.0.2
 
-EXE = cwww
-SRC = main.c
+$(BUILD)/libeio/configure:
+	$(QUIET) $(LOG) "[Unpacking libeio]"
+	$(CHDIR) $(BUILD); \
+	    $(TAR) zxf $(DEPS)/libeio-$(LIBEIO_VERSION).tar.gz; \
+	    $(MOVE) libeio-$(LIBEIO_VERSION) libeio
+	$(QUIET) $(LOG) "[Done unpacking libeio]"
 
-all: setup mbedtls libz curl libev libeio
+$(BUILD)/libeio/Makefile: $(BUILD)/libeio/configure
+	$(QUIET) $(LOG) "[Configuring libeio]"
+	$(CHDIR) $(BUILD)/libeio; \
+	    $(CONFIG); \
+	    $(ENV) ./$(CONFIGURE)
+	$(QUIET) $(LOG) "[Done configuring libeio]"
 
-setup:
-	$(QUIET) $(LOG) "[Creating workspace]"
-	$(MKDIR) $(BUILD) $(BUILD_LIB) $(BUILD_INCLUDE)
-	$(QUIET) $(LOG) "[Done creating workspace]"
+$(BUILD_LIB)/libeio.a: $(BUILD)/libeio/Makefile
+	$(QUIET) $(LOG) "[Building libeio]"
+	$(CHDIR) $(BUILD)/libeio; \
+	    $(ENV) $(MAKE); \
+	    $(MAKE_INSTALL)
+	$(QUIET) $(LOG) "[Done building libeio]"
 
-clean:
-	$(QUIET) $(LOG) "[Cleaning old build]"
-	$(RM) $(BUILD) $(EXE)
-	$(QUIET) $(LOG) "[Done cleaning old build]"
-
-exe:
-	$(QUIET) $(LOG) "[Building executable]"
-	$(ENV) $(CC) -I$(BUILD)/include $(SRC) -o $(EXE) -L$(BUILD)/lib -lmbedtls -lmbedx509 -lmbedcrypto -lz -lcurl -lev -leio
-	$(QUIET) $(LOG) "[Done building executable]"
-
-include make/Makefile.libz
-include make/Makefile.curl
-include make/Makefile.libev
-include make/Makefile.libeio
-include make/Makefile.mbedtls
+libeio: $(BUILD_LIB)/libeio.a

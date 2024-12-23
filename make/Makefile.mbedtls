@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2024 Ivan Nikolskiy
+# Copyright (c) 2020-2024 EntySec
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,30 +22,27 @@
 # SOFTWARE.
 #
 
-include make/Makefile.common
+MBEDTLS_VERSION = 2.23.0
 
-EXE = cwww
-SRC = main.c
+MBEDTLS_ENV=
+ifneq (,$(findstring mingw,$(TARGET)))
+	MBEDTLS_ENV=WINDOWS=1
+endif
 
-all: setup mbedtls libz curl libev libeio
+$(BUILD)/mbedtls/Makefile:
+	$(QUIET) $(LOG) "[Unpacking mbedtls]"
+	$(CHDIR) $(BUILD); \
+	    $(TAR) zxf $(DEPS)/mbedtls-$(MBEDTLS_VERSION).tar.gz; \
+	    $(MOVE) mbedtls-$(MBEDTLS_VERSION) mbedtls
+	$(QUIET) $(LOG) "[Done unpacking mbedtls]"
 
-setup:
-	$(QUIET) $(LOG) "[Creating workspace]"
-	$(MKDIR) $(BUILD) $(BUILD_LIB) $(BUILD_INCLUDE)
-	$(QUIET) $(LOG) "[Done creating workspace]"
+$(BUILD_LIB)/mbedtls.a: $(BUILD)/mbedtls/Makefile
+	$(QUIET) $(LOG) "[Building mbedtls]"
+	$(CHDIR) $(BUILD)/mbedtls; \
+	    $(SED) -ibak 's/-no_warning_for_no_symbols//' library/Makefile; \
+	    $(ENV) $(MBEDTLS_ENV) $(MAKE) lib; \
+	    $(COPY) library/*.a $(BUILD_LIB); \
+	    $(COPY) include/mbedtls $(BUILD_INCLUDE)
+	$(QUIET) $(LOG) "[Done building mbedtls]"
 
-clean:
-	$(QUIET) $(LOG) "[Cleaning old build]"
-	$(RM) $(BUILD) $(EXE)
-	$(QUIET) $(LOG) "[Done cleaning old build]"
-
-exe:
-	$(QUIET) $(LOG) "[Building executable]"
-	$(ENV) $(CC) -I$(BUILD)/include $(SRC) -o $(EXE) -L$(BUILD)/lib -lmbedtls -lmbedx509 -lmbedcrypto -lz -lcurl -lev -leio
-	$(QUIET) $(LOG) "[Done building executable]"
-
-include make/Makefile.libz
-include make/Makefile.curl
-include make/Makefile.libev
-include make/Makefile.libeio
-include make/Makefile.mbedtls
+mbedtls: $(BUILD_LIB)/mbedtls.a

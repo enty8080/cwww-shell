@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2024 Ivan Nikolskiy
+# Copyright (c) 2020-2024 EntySec
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,30 +22,27 @@
 # SOFTWARE.
 #
 
-include make/Makefile.common
+LIBEV_VERSION = 4.33
 
-EXE = cwww
-SRC = main.c
+$(BUILD)/libev/configure:
+	$(QUIET) $(LOG) "[Unpacking libev]"
+	$(CHDIR) $(BUILD); \
+	    $(TAR) zxf $(DEPS)/libev-$(LIBEV_VERSION).tar.gz; \
+	    $(MOVE) libev-$(LIBEV_VERSION) libev
+	$(QUIET) $(LOG) "[Done unpacking libev]"
 
-all: setup mbedtls libz curl libev libeio
+$(BUILD)/libev/Makefile: $(BUILD)/libev/configure
+	$(QUIET) $(LOG) "[Configuring libev]"
+	$(CHDIR) $(BUILD)/libev; \
+	    $(CONFIG); \
+	    $(ENV) ./$(CONFIGURE)
+	$(QUIET) $(LOG) "[Done configuring libev]"
 
-setup:
-	$(QUIET) $(LOG) "[Creating workspace]"
-	$(MKDIR) $(BUILD) $(BUILD_LIB) $(BUILD_INCLUDE)
-	$(QUIET) $(LOG) "[Done creating workspace]"
+$(BUILD_LIB)/libev.a: $(BUILD)/libev/Makefile
+	$(QUIET) $(LOG) "[Building libev]"
+	$(CHDIR) $(BUILD)/libev; \
+	    $(ENV) $(MAKE); \
+	    $(MAKE_INSTALL)
+	$(QUIET) $(LOG) "[Done building libev]"
 
-clean:
-	$(QUIET) $(LOG) "[Cleaning old build]"
-	$(RM) $(BUILD) $(EXE)
-	$(QUIET) $(LOG) "[Done cleaning old build]"
-
-exe:
-	$(QUIET) $(LOG) "[Building executable]"
-	$(ENV) $(CC) -I$(BUILD)/include $(SRC) -o $(EXE) -L$(BUILD)/lib -lmbedtls -lmbedx509 -lmbedcrypto -lz -lcurl -lev -leio
-	$(QUIET) $(LOG) "[Done building executable]"
-
-include make/Makefile.libz
-include make/Makefile.curl
-include make/Makefile.libev
-include make/Makefile.libeio
-include make/Makefile.mbedtls
+libev: $(BUILD_LIB)/libev.a

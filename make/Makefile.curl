@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2024 Ivan Nikolskiy
+# Copyright (c) 2020-2024 EntySec
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,10 +26,10 @@ CURL_VERSION = 7.71.1
 CURL_DEPS = $(BUILD_LIB)/libz.a
 
 ifneq (,$(findstring mingw,$(BUILD)))
-    CURL_DEPS += --without-ssl --with-winssl
+    CURL_OPTS = --without-ssl --with-winssl
 else
     CURL_DEPS += $(BUILD_LIB)/libmbedtls.a
-    CURL_DEPS += --without-ssl --with-mbedtls=$(BUILD)
+    CURL_OPTS = --without-ssl --with-mbedtls=$(BUILD)
 endif
 
 $(BUILD)/curl/configure:
@@ -44,7 +44,9 @@ $(BUILD)/curl/Makefile: $(BUILD)/curl/configure
 	$(CHDIR) $(BUILD)/curl; \
 	    $(CONFIG); \
 	    $(ENV) ./$(CONFIGURE) \
+	    $(CURL_OPTS) \
 	    --without-libpsl \
+	    --without-nghttp2 \
 		--enable-optimize \
 		--disable-dict  \
 		--disable-gopher  \

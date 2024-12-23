@@ -66,7 +66,11 @@ def post_method(request):
 
 
 def main():
-    l = HTTPListener('127.0.0.1', 8080, methods={'get': get_method, 'post': post_method})
+    if len(sys.argv) < 3:
+        print(f'Usage {sys.argv[0]} <host> <port>')
+        return
+
+    l = HTTPListener(sys.argv[1], int(sys.argv[2]), methods={'get': get_method, 'post': post_method})
     l.listen()
     print(INTRO)
 
