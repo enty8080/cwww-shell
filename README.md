@@ -10,8 +10,7 @@
 [![Forks](https://img.shields.io/github/forks/enty8080/cwww-shell?style=flat&color=green)](https://github.com/enty8080/cwww-shell/forks)
 [![Stars](https://img.shields.io/github/stars/enty8080/cwww-shell?style=flat&color=yellow)](https://github.com/enty8080/cwww-shell/stargazers)
 
-A proof-of-concept of placing backdoors behind firewalls using HTTP communication with command & control server. This tool uses HTTP requests to fetch commands and return 
-output to a control server.
+A proof-of-concept of placing backdoors behind firewalls using HTTP communication with command & control server. This tool uses HTTP requests to fetch commands and return output to a control server.
 
 ## Building
 
@@ -71,16 +70,13 @@ Welcome to the cwww-shell v1.0 by Ivan Nikolskiy / enty8080
 
 Introduction: Wait for your client to connect, examine it's output and then
               type in your commands to execute on client. You'll have to
-              wait some time. Use ";" for multiple commands.
+              wait some time between commands. Use ";" for multiple commands.
               Trying to execute interactive commands may give you headache
-              so beware. Your target may hang until the daily connect try
-              (if set - otherwise you lost).
-              You also shouldn't try to view binary data too ;-)
+              so beware. You also shouldn't try to view binary data too.
               "echo bla >> file", "cat >> file <<- EOF", sed etc. are your
-              friends if you don't like using vi in a delayed line mode ;-)
+              friends if you don't like using vi in a delayed line mode.
               To exit this program on any time without doing harm to either
               server or client just type "quit".
-              Now have fun.
 
 
 Waiting for connect ... connect from 127.0.0.1:50194
@@ -92,9 +88,6 @@ sent.
 Waiting for connect ... connect from 127.0.0.1:50195
 
 felix
-
-Waiting for connect ... connect from 127.0.0.1:50196
-
 
 Waiting for connect ... connect from 127.0.0.1:50197
 
