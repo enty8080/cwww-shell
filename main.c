@@ -113,6 +113,7 @@ void send_post_request(const char *url, const char *data)
     struct curl_slist *headers = NULL;
 
     curl = curl_easy_init();
+    //printf("%s\n", data);
 
     if (curl)
     {
@@ -123,7 +124,8 @@ void send_post_request(const char *url, const char *data)
 
         status = curl_easy_perform(curl);
 
-        if (status != CURLE_OK) {
+        if (status != CURLE_OK)
+        {
             fprintf(stderr, "POST request failed: %s\n", curl_easy_strerror(status));
         }
 
@@ -136,8 +138,9 @@ void send_post_request(const char *url, const char *data)
 static void execute_command(eio_req *request)
 {
     struct async_handle_data *data;
-    char output[MAX_BUFFER];
+    char output[MAX_BUFFER + 1];
     FILE *fp;
+    size_t bytes_read;
 
     data = request->data;
     fp = popen(data->command, "r");
@@ -148,12 +151,12 @@ static void execute_command(eio_req *request)
         return;
     }
 
-    memset(output, '\0', MAX_BUFFER);
+    memset(output, '\0', sizeof(output));
 
-    while (fread(output, 1, MAX_BUFFER, fp) > 0)
+    while ((bytes_read = fread(output, 1, MAX_BUFFER, fp)) > 0)
     {
         send_post_request(data->url, output);
-        memset(output, 0, MAX_BUFFER);
+        memset(output, '\0', sizeof(output));
     }
 
     pclose(fp);

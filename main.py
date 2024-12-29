@@ -31,16 +31,13 @@ Welcome to the cwww-shell v1.0 by Ivan Nikolskiy / enty8080
 
 Introduction: Wait for your client to connect, examine it\'s output and then
               type in your commands to execute on client. You\'ll have to
-              wait some time. Use ";" for multiple commands.
+              wait some time between commands. Use ";" for multiple commands.
               Trying to execute interactive commands may give you headache
-              so beware. Your target may hang until the daily connect try
-              (if set - otherwise you lost).
-              You also shouldn\'t try to view binary data too ;-)
+              so beware. You also shouldn\'t try to view binary data too.
               "echo bla >> file", "cat >> file <<- EOF", sed etc. are your
-              friends if you don\'t like using vi in a delayed line mode ;-)
+              friends if you don\'t like using vi in a delayed line mode.
               To exit this program on any time without doing harm to either
               server or client just type "quit".
-              Now have fun.
 """
 
 
