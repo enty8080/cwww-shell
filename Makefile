@@ -27,7 +27,7 @@ include make/Makefile.common
 EXE = cwww
 SRC = main.c
 
-all: setup mbedtls libz curl libev libeio
+all: setup mbedtls libz curl libev libeio exe
 
 setup:
 	$(QUIET) $(LOG) "[Creating workspace]"
