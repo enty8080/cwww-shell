@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020-2025 EntySec
+# Copyright (c) 2020-2024 EntySec
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -45,7 +45,6 @@ $(BUILD)/curl/Makefile: $(BUILD)/curl/configure
 	    $(CONFIG); \
 	    $(ENV) ./$(CONFIGURE) \
 	    $(CURL_OPTS) \
-		--without-brotli \
 	    --without-libpsl \
 	    --without-nghttp2 \
 		--enable-optimize \
@@ -67,8 +66,7 @@ $(BUILD)/curl/Makefile: $(BUILD)/curl/configure
 		--without-librtmp  \
 		--without-libssh2  \
 		--disable-shared \
-		--without-ca-bundle \
-		--without-ca-path \
+		--without-ca-bundle --without-ca-path \
 		--enable-threaded-resolver \
 		ac_cv_header_sys_poll_h=no
 	$(QUIET) $(LOG) "[Done configuring curl]"
